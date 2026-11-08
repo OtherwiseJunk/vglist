@@ -12,7 +12,14 @@ root=${CLAUDE_PROJECT_DIR:-$(pwd)}
 # Run a command; block only if it exits with a real failure.
 check() {
   local out status
-  out=$(timeout "${CHECK_TIMEOUT:-30}" "$@" 2>&1)
+  # macOS has no `timeout` (GNU coreutils); fall back to gtimeout, then to none.
+  if command -v timeout > /dev/null 2>&1; then
+    out=$(timeout "${CHECK_TIMEOUT:-30}" "$@" 2>&1)
+  elif command -v gtimeout > /dev/null 2>&1; then
+    out=$(gtimeout "${CHECK_TIMEOUT:-30}" "$@" 2>&1)
+  else
+    out=$("$@" 2>&1)
+  fi
   status=$?
   [ "$status" -eq 0 ] || [ "$status" -eq 124 ] && return 0
   printf '%s\n' "$out" >&2

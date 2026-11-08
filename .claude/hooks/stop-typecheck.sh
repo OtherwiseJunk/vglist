@@ -22,7 +22,14 @@ cd "$root/frontend" || exit 0
 # vue-tsc can't be scoped to one file, so this checks the whole project.
 # Mirrors `pnpm run typecheck`, but calls the local binary so pnpm startup
 # (and any package-manager self-install) can't eat the timeout.
-out=$(timeout 60 "$bin/vue-tsc" --noEmit 2>&1)
+# macOS has no `timeout` (GNU coreutils); fall back to gtimeout, then to none.
+if command -v timeout > /dev/null 2>&1; then
+  out=$(timeout 60 "$bin/vue-tsc" --noEmit 2>&1)
+elif command -v gtimeout > /dev/null 2>&1; then
+  out=$(gtimeout 60 "$bin/vue-tsc" --noEmit 2>&1)
+else
+  out=$("$bin/vue-tsc" --noEmit 2>&1)
+fi
 status=$?
 [ "$status" -eq 0 ] || [ "$status" -eq 124 ] && exit 0
 printf '%s\n' "$out" >&2
